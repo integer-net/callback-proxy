@@ -33,7 +33,7 @@ class Dispatcher
         $firstSuccessfulResponse = null;
         foreach ($this->targets as $target) {
             $response = $this->dispatchSingle($request, $target, $action);
-            if ($firstSuccessfulResponse === null && $response->getStatusCode() === 200) {
+            if ($firstSuccessfulResponse === null && $this->responseIsSuccessful($response)) {
                 $firstSuccessfulResponse = $response;
             }
         }
@@ -56,5 +56,10 @@ class Dispatcher
     private function responseWithTargetHeader(ResponseInterface $response, UriInterface $target)
     {
         return $response->withHeader('X-Response-From', $target->__toString());
+    }
+
+    private function responseIsSuccessful(ResponseInterface $response): bool
+    {
+        return $response->getStatusCode() >= 200 && $response->getStatusCode() < 300;
     }
 }

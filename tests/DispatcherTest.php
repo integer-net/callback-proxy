@@ -84,6 +84,26 @@ class DispatcherTest extends TestCase
         $this->and_response_should_be_returned_from_target(7);
     }
 
+    public function testFollowsRedirects()
+    {
+        $this->given_first_response_is_redirect(301);
+        $this->given_targets_with_response_statuses(200, 200);
+        $this->when_request_is_dispatched();
+        $this->then_requests_should_be_dispatched_to_targets(0, 0, 1);
+        $this->and_response_should_be_returned_from_target(0);
+    }
+
+    /**
+     * @dataProvider successfulStatusCodes
+     */
+    public function testAcceptsAll2xxStatusCodes(int $successfulStatusCode)
+    {
+        $this->given_targets_with_response_statuses($successfulStatusCode, 200);
+        $this->when_request_is_dispatched();
+        $this->then_requests_should_be_dispatched_to_targets(0, 1);
+        $this->and_response_should_be_returned_from_target(0);
+    }
+
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
     private function given_targets_with_response_statuses(int ...$responseStatuses): void
     {
@@ -152,12 +172,34 @@ class DispatcherTest extends TestCase
                 'X-Response-From',
                 $this->targetBaseUrls[$targetIndex] . $requestPath
             ),
-            $this->response
+            $this->response,
+            'Expected response from target ' . $targetIndex
         );
+    }
+
+    //phpcs:ignore PSR1.Methods.CamelCapsMethodName
+    private function given_first_response_is_redirect($responseStatus): void
+    {
+        $this->mockHandler->append($this->uniqueResponse($responseStatus)->withHeader('Location', '/'));
     }
 
     private function uniqueResponse($statusCode): Response
     {
         return new Response($statusCode, ['ETag' => uniqid('', true)]);
+    }
+
+    public static function successfulStatusCodes()
+    {
+        return [
+            [201],
+            [202],
+            [203],
+            [204],
+            [205],
+            [206],
+            [207],
+            [208],
+            [226],
+        ];
     }
 }
