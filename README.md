@@ -22,7 +22,7 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     ```
     composer create-project integer-net/callback-proxy
     ```
-2. Set up web server with document root in `pub`.
+2. Set up web server with document root in `public`.
 
 ## Configuration
 

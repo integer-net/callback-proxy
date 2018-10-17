@@ -12,5 +12,8 @@
         "psr-4": {
             "IntegerNet\\CallbackProxy\\": "src/"
         }
+    },
+    "require-dev": {
+        "pds/skeleton": "^1.0"
     }
 }
