@@ -2,12 +2,14 @@
 namespace IntegerNet\CallbackProxy;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\RequestException;
 use Psr\Http\Message\RequestInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\UriInterface;
 
-/*
- * Dispatches a request to multiple targets, returns first successful response (HTTP 200) or last response if none are successful
+/**
+ * Dispatches a request to multiple targets, returns first successful response (HTTP 200) or last response if none are
+ * successful
  */
 class Dispatcher
 {
@@ -26,7 +28,7 @@ class Dispatcher
         $this->targets = $targets;
     }
 
-    public function dispatch(RequestInterface $request, ResponseInterface $response, string $action)
+    public function dispatch(RequestInterface $request, ResponseInterface $response, string $action): ResponseInterface
     {
         foreach ($this->targets as $target) {
             $response = $this->dispatchSingle($request, $target, $action);
@@ -40,6 +42,18 @@ class Dispatcher
     private function dispatchSingle(RequestInterface $request, UriInterface $target, string $action) : ResponseInterface
     {
         $target = $target->withPath($target->getPath() . $action);
-        return $this->client->send($request->withUri($target))->withHeader('X-Response-From', $target->__toString());
+        try {
+            return $this->responseWithTargetHeader($this->client->send($request->withUri($target)), $target);
+        } catch (RequestException $e) {
+            if ($e->getResponse() instanceof ResponseInterface) {
+                return $this->responseWithTargetHeader($e->getResponse(), $target);
+            }
+            throw $e;
+        }
+    }
+
+    private function responseWithTargetHeader(ResponseInterface $response, UriInterface $target)
+    {
+        return $response->withHeader('X-Response-From', $target->__toString());
     }
 }
