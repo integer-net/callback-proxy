@@ -70,11 +70,10 @@ class DispatcherTest extends TestCase
 
     public function testSendsRequestsToAllTargets()
     {
-        $this->markTestSkipped('Does not work yet. Dispatcher stops on first success.');
         $this->given_targets_with_response_statuses(200, 500, 200);
         $this->when_request_is_dispatched();
         $this->then_requests_should_be_dispatched_to_targets(0, 1, 2);
-        $this->and_response_should_be_returned_from_target(1);
+        $this->and_response_should_be_returned_from_target(0);
     }
 
     public function testReturnsLastResponseIfNoSuccess()

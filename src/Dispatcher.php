@@ -30,13 +30,14 @@ class Dispatcher
 
     public function dispatch(RequestInterface $request, ResponseInterface $response, string $action): ResponseInterface
     {
+        $firstSuccessfulResponse = null;
         foreach ($this->targets as $target) {
             $response = $this->dispatchSingle($request, $target, $action);
-            if ($response->getStatusCode() === 200) {
-                return $response;
+            if ($firstSuccessfulResponse === null && $response->getStatusCode() === 200) {
+                $firstSuccessfulResponse = $response;
             }
         }
-        return $response;
+        return $firstSuccessfulResponse ?? $response;
     }
 
     private function dispatchSingle(RequestInterface $request, UriInterface $target, string $action) : ResponseInterface
