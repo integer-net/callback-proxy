@@ -1,0 +1,17 @@
+parameters:
+    git_dir: .
+    bin_dir: vendor/bin
+    tasks:
+        composer: []
+        phplint: []
+        phan: []
+        phpstan:
+            level: 7
+        composer_require_checker: []
+        phpcs:
+            standard: PSR2
+        phpmd:
+            ruleset: ['cleancode', 'codesize', 'design', 'unusedcode']
+        phpunit: []
+        infection:
+            threads: 4
