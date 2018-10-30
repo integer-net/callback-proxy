@@ -8,6 +8,7 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
+use GuzzleHttp\Psr7\ServerRequest;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\Headers;
@@ -38,9 +39,9 @@ class DispatcherTest extends TestCase
      */
     private $targetBaseUrls;
     /**
-     * @var Uri[]
+     * @var Target[]
      */
-    private $targetUriObjects;
+    private $targetObjects;
     /**
      * @var Response[]
      */
@@ -49,6 +50,10 @@ class DispatcherTest extends TestCase
      * @var ResponseInterface
      */
     private $response;
+    /**
+     * @var int
+     */
+    private $requestIndexOffset = 0;
 
     protected function setUp()
     {
@@ -104,6 +109,14 @@ class DispatcherTest extends TestCase
         $this->and_response_should_be_returned_from_target(0);
     }
 
+    public function testSetsBasicAuthHeaders()
+    {
+        $basicAuth = 'janedoe:password123';
+        $this->given_targets_with_config(['uri' => 'https://target1.example.com', 'basic-auth' => $basicAuth]);
+        $this->when_request_is_dispatched();
+        $this->then_request_should_contain_headers(0, ['Authorization' => 'Basic ' . base64_encode($basicAuth)]);
+    }
+
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
     private function given_targets_with_response_statuses(int ...$responseStatuses): void
     {
@@ -113,9 +126,9 @@ class DispatcherTest extends TestCase
             },
             range(1, count($responseStatuses))
         );
-        $this->targetUriObjects = array_map(
+        $this->targetObjects = array_map(
             function (string $url) {
-                return Uri::createFromString($url);
+                return new Target(Uri::createFromString($url));
             },
             $this->targetBaseUrls
         );
@@ -129,13 +142,37 @@ class DispatcherTest extends TestCase
     }
 
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
+    private function given_targets_with_config(...$targetConfigs): void
+    {
+        $this->targetBaseUrls = array_map(
+            function ($config) {
+                return $config['uri'];
+            },
+            $targetConfigs
+        );
+        $this->targetObjects = array_map(
+            function ($config) {
+                return Target::fromConfig($config);
+            },
+            $targetConfigs
+        );
+        $this->targetResponses = array_map(
+            function ($config) {
+                return $this->uniqueResponse(200);
+            },
+            $targetConfigs
+        );
+        $this->mockHandler->append(...$this->targetResponses);
+    }
+
+    //phpcs:ignore PSR1.Methods.CamelCapsMethodName
     private function when_request_is_dispatched(
         $method = self::DEFAULT_REQUEST_METHOD,
         $requestPath = self::DEFAULT_REQUEST_PATH
     ) {
         $dispatcher = new Dispatcher(
             $this->client,
-            ...$this->targetUriObjects
+            ...$this->targetObjects
         );
         $response = $dispatcher->dispatch(
             new SlimRequest(
@@ -160,6 +197,14 @@ class DispatcherTest extends TestCase
             $this->historyContainer,
             'Expected responses from targets ' . implode(',', $requestedTargets)
         );
+        foreach ($requestedTargets as $requestIndex) {
+            /** @var ServerRequest $request */
+            $request = $this->historyContainer[$requestIndex + $this->requestIndexOffset]['request'];
+            $this->assertEquals(
+                $this->targetBaseUrls[$requestIndex] . self::DEFAULT_REQUEST_PATH,
+                (string)$request->getUri()
+            );
+        }
     }
 
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
@@ -180,7 +225,24 @@ class DispatcherTest extends TestCase
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
     private function given_first_response_is_redirect($responseStatus): void
     {
-        $this->mockHandler->append($this->uniqueResponse($responseStatus)->withHeader('Location', '/'));
+        $this->mockHandler->append(
+            $this->uniqueResponse($responseStatus)->withHeader('Location', '/' . self::DEFAULT_REQUEST_PATH)
+        );
+        $this->requestIndexOffset = 1;
+    }
+
+    //phpcs:ignore PSR1.Methods.CamelCapsMethodName
+    private function then_request_should_contain_headers($requestIndex, $expectedHeaders)
+    {
+        /** @var ServerRequest $request */
+        $request = $this->historyContainer[$requestIndex]['request'];
+        foreach ($expectedHeaders as $name => $value) {
+            $this->assertEquals(
+                $value,
+                $request->getHeaderLine($name),
+                "Header '$name' should equal '$value'"
+            );
+        }
     }
 
     private function uniqueResponse($statusCode): Response

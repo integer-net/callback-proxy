@@ -50,6 +50,19 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     
     This example routes `/paypal/dev/*` to `https://dev1.example.com/paypal/*` and `https://dev2.example.com/paypal/*`.
     
+## Advanced Configuration
+
+Instead of a plain URI string, each target can also be configured with additional options:
+
+```
+[
+  'uri' => 'https://dev1.example.com/paypal/',
+  'basic-auth' => 'username:password',
+]
+```
+
+- **uri** (required) - the base URI
+- **basic-auth** - HTTP basic authentication in the form "username:password"
 ## Change log
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
