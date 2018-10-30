@@ -1,17 +1,18 @@
 <?php
+
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\StreamHandler;
 use IntegerNet\CallbackProxy\Dispatcher;
+use IntegerNet\CallbackProxy\Targets;
 use Psr\Http\Message\RequestInterface;
 use Slim\Container;
 use Slim\Http\Response;
-use Slim\Http\Uri;
 
 require __DIR__ . '/../vendor/autoload.php';
 
 $config = [
     'settings' => include '../config.php',
-    'httpClient' => function(Container $container) {
+    'httpClient' => function (Container $container) {
         return new Client(
             [
                 'handler' => new StreamHandler(),
@@ -19,15 +20,10 @@ $config = [
             ]
         );
     },
-    'proxyTargets' => function(Container $container) {
+    'proxyTargets' => function (Container $container) {
         return array_map(
-            function($uris) {
-                return array_map(
-                    function(string $uri) {
-                        return Uri::createFromString($uri);
-                    },
-                    $uris
-                );
+            function ($config) {
+                return Targets::fromConfig($config);
             },
             $container->settings['proxy']['targets']
         );
