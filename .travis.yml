@@ -18,6 +18,8 @@ matrix:
   include:
     - php: 7.1
       env: 'COMPOSER_FLAGS="--prefer-stable --prefer-lowest"'
+  allow_failures:
+    - env: 'COMPOSER_FLAGS="--prefer-stable --prefer-lowest"'
 
 before_script:
   - pecl install ast
