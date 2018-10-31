@@ -1,4 +1,5 @@
 <?php
+
 namespace IntegerNet\CallbackProxy;
 
 use GuzzleHttp\Client;
@@ -18,11 +19,11 @@ class Dispatcher
      */
     private $client;
     /**
-     * @var UriInterface[]
+     * @var Target[]
      */
     private $targets;
 
-    public function __construct(Client $client, UriInterface ...$targets)
+    public function __construct(Client $client, Target ...$targets)
     {
         $this->client = $client;
         $this->targets = $targets;
@@ -40,22 +41,17 @@ class Dispatcher
         return $firstSuccessfulResponse ?? $response;
     }
 
-    private function dispatchSingle(RequestInterface $request, UriInterface $target, string $action) : ResponseInterface
+    private function dispatchSingle(RequestInterface $request, Target $target, string $action): ResponseInterface
     {
-        $target = $target->withPath($target->getPath() . $action);
         try {
-            return $this->responseWithTargetHeader($this->client->send($request->withUri($target)), $target);
+            $response = $this->client->send($target->applyToRequest($request, $action));
+            return $target->applyToResponse($response, $action);
         } catch (RequestException $e) {
             if ($e->getResponse() instanceof ResponseInterface) {
-                return $this->responseWithTargetHeader($e->getResponse(), $target);
+                return $target->applyToResponse($e->getResponse(), $action);
             }
             throw $e;
         }
-    }
-
-    private function responseWithTargetHeader(ResponseInterface $response, UriInterface $target)
-    {
-        return $response->withHeader('X-Response-From', $target->__toString());
     }
 
     private function responseIsSuccessful(ResponseInterface $response): bool
