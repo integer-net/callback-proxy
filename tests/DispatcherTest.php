@@ -9,6 +9,7 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
+use IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\Headers;
@@ -31,15 +32,19 @@ class DispatcherTest extends TestCase
      */
     private $mockHandler;
     /**
-     * @var Client
+     * @var HttpClient
      */
     private $client;
+    /**
+     * @var DispatchStrategy
+     */
+    private $strategy;
     /**
      * @var string[]
      */
     private $targetBaseUrls;
     /**
-     * @var Target[]
+     * @var Targets
      */
     private $targetObjects;
     /**
@@ -62,7 +67,8 @@ class DispatcherTest extends TestCase
         $this->mockHandler = new MockHandler();
         $handler = HandlerStack::create($this->mockHandler);
         $handler->push(Middleware::history($this->historyContainer));
-        $this->client = new Client(['handler' => $handler]);
+        $this->client = new HttpClient(new Client(['handler' => $handler]));
+        $this->strategy = new DispatchAllReturnFirstSuccess;
     }
 
     public function testReturnsFirstSuccessfulResponse()
@@ -126,11 +132,13 @@ class DispatcherTest extends TestCase
             },
             range(1, count($responseStatuses))
         );
-        $this->targetObjects = array_map(
-            function (string $url) {
-                return new Target(Uri::createFromString($url));
-            },
-            $this->targetBaseUrls
+        $this->targetObjects = new Targets(
+            ...array_map(
+                function (string $url) {
+                    return new Target(Uri::createFromString($url));
+                },
+                $this->targetBaseUrls
+            )
         );
         $this->targetResponses = array_map(
             function (int $statusCode) {
@@ -150,12 +158,7 @@ class DispatcherTest extends TestCase
             },
             $targetConfigs
         );
-        $this->targetObjects = array_map(
-            function ($config) {
-                return Target::fromConfig($config);
-            },
-            $targetConfigs
-        );
+        $this->targetObjects = Targets::fromConfig($targetConfigs);
         $this->targetResponses = array_map(
             function ($config) {
                 return $this->uniqueResponse(200);
@@ -172,7 +175,8 @@ class DispatcherTest extends TestCase
     ) {
         $dispatcher = new Dispatcher(
             $this->client,
-            ...$this->targetObjects
+            $this->targetObjects,
+            $this->strategy
         );
         $response = $dispatcher->dispatch(
             new SlimRequest(

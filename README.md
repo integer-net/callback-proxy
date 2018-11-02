@@ -12,7 +12,7 @@ This is a service to integrate third party integrations with multiple environmen
 
 It can distribute callbacks to several systems, for example:
 
-    proxy.example.com/paypal/dev/postBack
+    proxy.example.com/paypal-dev/postBack
     
     =>
     
@@ -40,7 +40,7 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     ```
     'proxy' => [
         'targets' => [
-            'paypal/dev' => [
+            'paypal-dev' => [
                 'https://dev1.example.com/paypal/',
                 'https://dev2.example.com/paypal/',
             ],
@@ -48,7 +48,7 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     ],
     ```
     
-    This example routes `/paypal/dev/*` to `https://dev1.example.com/paypal/*` and `https://dev2.example.com/paypal/*`.
+    This example routes `/paypal-dev/*` to `https://dev1.example.com/paypal/*` and `https://dev2.example.com/paypal/*`.
     
 ## Advanced Configuration
 
@@ -74,6 +74,12 @@ composer test
 ```
 
 Runs unit tests, mutation tests and static analysis
+
+```
+php -S localhost:9000 -t public 
+```
+
+Starts the proxy locally on port 9000 for manual testing. Needs a valid configuration in `config.php`. As a generic target URI, you can use `https://httpbin.org/anything/`
 
 ## Contributing
 

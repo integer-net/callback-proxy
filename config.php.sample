@@ -6,12 +6,12 @@ return [
     'displayErrorDetails' => true,
     'proxy' => [
         'targets' => [
-            'paypal/dev' => [
+            'paypal-dev' => [
                 'https://dev1.example.com/paypal/',
                 'https://dev2.example.com/paypal/',
                 'https://dev3.example.com/paypal/',
             ],
-            'paypal/qa' => [
+            'paypal-qa' => [
                 'https://qa1.example.com/paypal/',
                 'https://qa2.example.com/paypal/',
                 'https://qa3.example.com/paypal/',
