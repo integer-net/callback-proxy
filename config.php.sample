@@ -5,6 +5,7 @@
 return [
     'displayErrorDetails' => true,
     'proxy' => [
+        'strategy' => \IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess::class,
         'targets' => [
             'paypal-dev' => [
                 'https://dev1.example.com/paypal/',

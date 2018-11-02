@@ -49,7 +49,7 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     ```
     
     This example routes `/paypal-dev/*` to `https://dev1.example.com/paypal/*` and `https://dev2.example.com/paypal/*`.
-    
+
 ## Advanced Configuration
 
 Instead of a plain URI string, each target can also be configured with additional options:
@@ -63,6 +63,24 @@ Instead of a plain URI string, each target can also be configured with additiona
 
 - **uri** (required) - the base URI
 - **basic-auth** - HTTP basic authentication in the form "username:password"
+
+The default dispatcher strategy is to dispatch the request to all targets and return the first successful (2xx) response.
+
+You can choose a different strategy in `config.php`:
+
+```
+'proxy' => [
+    'strategy' => \IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess::class,
+]
+```
+
+**Available Strategies:**
+
+- `\IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess::class` - the default strategy, see above
+- `\IntegerNet\CallbackProxy\DispatchStrategy\StopOnFirstSucces::class` - returns the first successful (2xx) response, stops dispatching further targets 
+
+You can implement your own strategies, by implementing the `\IntegerNet\CallbackProxy\DispatchStrategy` interface. 
+
 ## Change log
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.

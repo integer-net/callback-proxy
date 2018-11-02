@@ -10,6 +10,7 @@ use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
 use IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess;
+use IntegerNet\CallbackProxy\DispatchStrategy\StopOnFirstSuccess;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\Headers;
@@ -87,6 +88,24 @@ class DispatcherTest extends TestCase
         $this->and_response_should_be_returned_from_target(0);
     }
 
+    public function testStopOnFirstSuccessStrategyWithSuccess()
+    {
+        $this->given_dispatch_strategy(new StopOnFirstSuccess());
+        $this->given_targets_with_response_statuses(404, 200, 500, 200);
+        $this->when_request_is_dispatched();
+        $this->then_requests_should_be_dispatched_to_targets(0, 1);
+        $this->and_response_should_be_returned_from_target(1);
+    }
+
+    public function testStopOnFirstSuccessStrategyWithoutSuccess()
+    {
+        $this->given_dispatch_strategy(new StopOnFirstSuccess());
+        $this->given_targets_with_response_statuses(500, 500);
+        $this->when_request_is_dispatched();
+        $this->then_requests_should_be_dispatched_to_targets(0, 1);
+        $this->and_response_should_be_returned_from_target(1);
+    }
+
     public function testReturnsLastResponseIfNoSuccess()
     {
         $this->given_targets_with_response_statuses(400, 401, 403, 404, 405, 500, 503, 504);
@@ -121,6 +140,12 @@ class DispatcherTest extends TestCase
         $this->given_targets_with_config(['uri' => 'https://target1.example.com', 'basic-auth' => $basicAuth]);
         $this->when_request_is_dispatched();
         $this->then_request_should_contain_headers(0, ['Authorization' => 'Basic ' . base64_encode($basicAuth)]);
+    }
+
+    //phpcs:ignore PSR1.Methods.CamelCapsMethodName
+    private function given_dispatch_strategy(DispatchStrategy $strategy)
+    {
+        $this->strategy = $strategy;
     }
 
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
