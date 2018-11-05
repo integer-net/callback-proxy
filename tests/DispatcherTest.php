@@ -9,6 +9,8 @@ use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
 use GuzzleHttp\Psr7\ServerRequest;
+use IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess;
+use IntegerNet\CallbackProxy\DispatchStrategy\StopOnFirstSuccess;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Slim\Http\Headers;
@@ -31,15 +33,19 @@ class DispatcherTest extends TestCase
      */
     private $mockHandler;
     /**
-     * @var Client
+     * @var HttpClient
      */
     private $client;
+    /**
+     * @var DispatchStrategy
+     */
+    private $strategy;
     /**
      * @var string[]
      */
     private $targetBaseUrls;
     /**
-     * @var Target[]
+     * @var Targets
      */
     private $targetObjects;
     /**
@@ -62,7 +68,8 @@ class DispatcherTest extends TestCase
         $this->mockHandler = new MockHandler();
         $handler = HandlerStack::create($this->mockHandler);
         $handler->push(Middleware::history($this->historyContainer));
-        $this->client = new Client(['handler' => $handler]);
+        $this->client = new HttpClient(new Client(['handler' => $handler]));
+        $this->strategy = new DispatchAllReturnFirstSuccess;
     }
 
     public function testReturnsFirstSuccessfulResponse()
@@ -79,6 +86,24 @@ class DispatcherTest extends TestCase
         $this->when_request_is_dispatched();
         $this->then_requests_should_be_dispatched_to_targets(0, 1, 2);
         $this->and_response_should_be_returned_from_target(0);
+    }
+
+    public function testStopOnFirstSuccessStrategyWithSuccess()
+    {
+        $this->given_dispatch_strategy(new StopOnFirstSuccess());
+        $this->given_targets_with_response_statuses(404, 200, 500, 200);
+        $this->when_request_is_dispatched();
+        $this->then_requests_should_be_dispatched_to_targets(0, 1);
+        $this->and_response_should_be_returned_from_target(1);
+    }
+
+    public function testStopOnFirstSuccessStrategyWithoutSuccess()
+    {
+        $this->given_dispatch_strategy(new StopOnFirstSuccess());
+        $this->given_targets_with_response_statuses(500, 500);
+        $this->when_request_is_dispatched();
+        $this->then_requests_should_be_dispatched_to_targets(0, 1);
+        $this->and_response_should_be_returned_from_target(1);
     }
 
     public function testReturnsLastResponseIfNoSuccess()
@@ -118,6 +143,12 @@ class DispatcherTest extends TestCase
     }
 
     //phpcs:ignore PSR1.Methods.CamelCapsMethodName
+    private function given_dispatch_strategy(DispatchStrategy $strategy)
+    {
+        $this->strategy = $strategy;
+    }
+
+    //phpcs:ignore PSR1.Methods.CamelCapsMethodName
     private function given_targets_with_response_statuses(int ...$responseStatuses): void
     {
         $this->targetBaseUrls = array_map(
@@ -126,11 +157,13 @@ class DispatcherTest extends TestCase
             },
             range(1, count($responseStatuses))
         );
-        $this->targetObjects = array_map(
-            function (string $url) {
-                return new Target(Uri::createFromString($url));
-            },
-            $this->targetBaseUrls
+        $this->targetObjects = new Targets(
+            ...array_map(
+                function (string $url) {
+                    return new Target(Uri::createFromString($url));
+                },
+                $this->targetBaseUrls
+            )
         );
         $this->targetResponses = array_map(
             function (int $statusCode) {
@@ -150,12 +183,7 @@ class DispatcherTest extends TestCase
             },
             $targetConfigs
         );
-        $this->targetObjects = array_map(
-            function ($config) {
-                return Target::fromConfig($config);
-            },
-            $targetConfigs
-        );
+        $this->targetObjects = Targets::fromConfig($targetConfigs);
         $this->targetResponses = array_map(
             function ($config) {
                 return $this->uniqueResponse(200);
@@ -172,7 +200,8 @@ class DispatcherTest extends TestCase
     ) {
         $dispatcher = new Dispatcher(
             $this->client,
-            ...$this->targetObjects
+            $this->targetObjects,
+            $this->strategy
         );
         $response = $dispatcher->dispatch(
             new SlimRequest(

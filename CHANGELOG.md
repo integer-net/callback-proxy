@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Added
 - Advanced configuration format
 - Allow configuring basic auth for targets
+- Configuration for dispatch strategies, with possible custom implementations
 
 ## 1.0.0 - 2018-10-17
 ### Added

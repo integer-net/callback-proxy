@@ -12,7 +12,7 @@ This is a service to integrate third party integrations with multiple environmen
 
 It can distribute callbacks to several systems, for example:
 
-    proxy.example.com/paypal/dev/postBack
+    proxy.example.com/paypal-dev/postBack
     
     =>
     
@@ -40,7 +40,7 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     ```
     'proxy' => [
         'targets' => [
-            'paypal/dev' => [
+            'paypal-dev' => [
                 'https://dev1.example.com/paypal/',
                 'https://dev2.example.com/paypal/',
             ],
@@ -48,8 +48,8 @@ If it is used for dev systems, only the proxy must be made accessible from outsi
     ],
     ```
     
-    This example routes `/paypal/dev/*` to `https://dev1.example.com/paypal/*` and `https://dev2.example.com/paypal/*`.
-    
+    This example routes `/paypal-dev/*` to `https://dev1.example.com/paypal/*` and `https://dev2.example.com/paypal/*`.
+
 ## Advanced Configuration
 
 Instead of a plain URI string, each target can also be configured with additional options:
@@ -63,6 +63,24 @@ Instead of a plain URI string, each target can also be configured with additiona
 
 - **uri** (required) - the base URI
 - **basic-auth** - HTTP basic authentication in the form "username:password"
+
+The default dispatcher strategy is to dispatch the request to all targets and return the first successful (2xx) response.
+
+You can choose a different strategy in `config.php`:
+
+```
+'proxy' => [
+    'strategy' => \IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess::class,
+]
+```
+
+**Available Strategies:**
+
+- `\IntegerNet\CallbackProxy\DispatchStrategy\DispatchAllReturnFirstSuccess::class` - the default strategy, see above
+- `\IntegerNet\CallbackProxy\DispatchStrategy\StopOnFirstSucces::class` - returns the first successful (2xx) response, stops dispatching further targets 
+
+You can implement your own strategies, by implementing the `\IntegerNet\CallbackProxy\DispatchStrategy` interface. 
+
 ## Change log
 
 Please see [CHANGELOG](CHANGELOG.md) for more information on what has changed recently.
@@ -74,6 +92,12 @@ composer test
 ```
 
 Runs unit tests, mutation tests and static analysis
+
+```
+php -S localhost:9000 -t public 
+```
+
+Starts the proxy locally on port 9000 for manual testing. Needs a valid configuration in `config.php`. As a generic target URI, you can use `https://httpbin.org/anything/`
 
 ## Contributing
 
