@@ -64,8 +64,21 @@ $app->any(
             $targets[$args['target']],
             $this->get('dispatchStrategy')
         );
-        $this->get('log')->debug('RESPONSE BODY:' . $response->getBody()->getContents());
-        return $dispatcher->dispatch($request, $response, $args['action']);
+
+        $response = $dispatcher->dispatch($request, $response, $args['action']);
+
+        $body = $response->getBody();
+        if ($body->isSeekable()) {
+            $previousPosition = $body->tell();
+            $body->rewind();
+        }
+        $contents = $body->getContents();
+        if ($body->isSeekable()) {
+            $body->seek($previousPosition);
+        }
+        $this->get('log')->debug('RESPONSE BODY:' . $contents);
+
+        return $response;
     }
 );
 
