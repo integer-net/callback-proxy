@@ -52,7 +52,9 @@ $app->any(
             $targets[$args['target']],
             $this->get('dispatchStrategy')
         );
-        return $dispatcher->dispatch($request, $response, $args['action']);
+        $response = $dispatcher->dispatch($request, $response, $args['action']);
+
+        return $response->withoutHeader('Transfer-Encoding');
     }
 );
 
