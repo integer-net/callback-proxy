@@ -78,7 +78,7 @@ $app->any(
         }
         $this->get('log')->debug('RESPONSE BODY:' . $contents);
 
-        return $response;
+        return $response->withoutHeader('Transfer-Encoding');
     }
 );
 
